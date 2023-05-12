@@ -1,0 +1,15 @@
+version: "3"
+services:
+  FlaskBackend:
+    build: '.'
+    ports:
+      - '5000:5000'
+  NgnixReverseProxy:
+    image: nginx:latest
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - "./nginx.conf:/etc/nginx/conf.d/default.conf"
+      - ".secrets/mf-scicat_lbl_gov_cert.cer:/etc/nginx/ssl/server.cer"
+      - ".secrets/mf-scicat.key:/etc/ngix/ssl/server.key"
