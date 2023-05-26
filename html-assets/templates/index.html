@@ -7,5 +7,10 @@
   </style>
 {% endblock %}
 {% block content %}
+{%if args.loggedIn == True %}
+<h2>Vist your <a href="/profile">Profile</a> to see your data</h2>
+{%else %}
+<h2>Please login.</h2>
+{%endif%}
 
 {% endblock %}

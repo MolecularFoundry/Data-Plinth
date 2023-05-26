@@ -1,15 +1,24 @@
 version: "3"
 services:
-  FlaskBackend:
+  flask-backend:
+    container_name: data-plinth-flask-backend
     build: '.'
+    volumes:
+      - "./server.py:/srv/server.py"
+      - "./oidc_server.py:/srv/oidc_server.py"
+      - "./html-assets/static:/srv/static"
+      - "./html-assets/templates:/srv/templates"
+      - "./.secrets/OIDC_CLIENT_SECRETS.json:/srv/.secrets/OIDC_CLIENT_SECRETS.json"
+      - "./.secrets:/srv/.secrets/"
+      
     ports:
       - '5000:5000'
-  NgnixReverseProxy:
+  ngnix-reverse-proxy:
     image: nginx:latest
     ports:
       - 80:80
       - 443:443
     volumes:
-      - "./nginx.conf:/etc/nginx/conf.d/default.conf"
+      - "./nginx.conf:/etc/nginx/nginx.conf"
       - ".secrets/mf-scicat_lbl_gov_cert.cer:/etc/nginx/ssl/server.cer"
       - ".secrets/mf-scicat.key:/etc/ngix/ssl/server.key"

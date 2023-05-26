@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+{% block title %}Index{% endblock %}
+{% block head %}
+  {{ super() }}
+  <style type="text/css">
+    .important { color: #336699; }
+  </style>
+{% endblock %}
+{% block content %}
+  {%if args.loggedIn =="True" %}
+    <h2>Hi {{ args["name"]}} thank you for logging in.</h2>
+    {%if args.data_set| length >0 %}
+      <p>here is your data :
+        <ul>
+          {% for item in args.data_set["proposals"] %}
+            <li>{{item}}</li>
+          {% endfor %}
+        </ul>
+      </p>
+    {%else%} 
+      <p> no Data go create some</p>
+    {%endif%}
+  {%endif%}
+{% endblock %}

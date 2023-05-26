@@ -1,0 +1,8 @@
+flask
+requests
+werkzeug
+oauthlib
+flask_oidc
+oauthlib
+flask_pyoidc
+urllib3
