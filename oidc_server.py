@@ -43,21 +43,27 @@ def argumentHandler(requestArguments,newArguments):
 @app.route("/")
 def home():
     arguments = {}
-    arguments["loggedIn"]="access_token" in  flask.session.keys()
+    arguments["loggedIn"]= bool(auth.valid_access_token())
+    if auth.valid_access_token():
+        arguments["event"] = True
+        arguments["event_type"] = "alert-success"
+        arguments["event_text"] = "You have been logged in"
+        arguments = argumentHandler(requestArguments=request.args,newArguments=arguments)
+    
     arguments = argumentHandler(requestArguments=request.args,newArguments=arguments)
     return render_template("index.html",args = arguments)
 
 @app.route('/login-page')
 def loginPage():
+    if( bool(auth.valid_access_token())):
+        return redirect("/")
     arguments = argumentHandler(requestArguments=request.args,newArguments={})
     return render_template("login.html",args=arguments)
 
 @app.route('/login-ORCID')
 @auth.oidc_auth(PROVIDER_NAME)
 def loginORCID():
-    arguments = argumentHandler(requestArguments=request.args,newArguments={"event":True,"event_type":"alert-sucess","event_text":"Login suce"})
-    encodedURl = "?"+urlencode(arguments)
-    return redirect("/profile"+encodedURl)
+    return redirect("/")
 
 @app.route('/logout')
 @auth.oidc_logout
@@ -71,10 +77,11 @@ def logout():
     return redirect("/"+encodedURl)
 
 @app.route('/profile')
-@auth.access_control(PROVIDER_NAME,scopes_required=['read', 'write'])
+@auth.oidc_auth(PROVIDER_NAME)
+#@auth.access_control(PROVIDER_NAME,scopes_required=['read', 'write'])
 def profile_route(): 
     arguments={}
-    arguments["loggedIn"]=True
+    arguments["loggedIn"]= bool(auth.valid_access_token())
     user_session = UserSession(flask.session)
     hidden_key = open(".secrets/MF-Hub-key").read().strip()
     orcid = user_session.userinfo["sub"]

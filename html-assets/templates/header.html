@@ -1,8 +1,7 @@
 
 {% if args.event %}
   <div class="alert {{args.event_type}} alert-dismissible fade show d-none" id = "alert" role="alert" >{{args.event_text}}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
-    </button>   
+  </button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
   </div>
   <script>
     const alert = document.getElementById('alert');

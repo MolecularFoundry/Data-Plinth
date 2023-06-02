@@ -7,7 +7,7 @@
   </style>
 {% endblock %}
 {% block content %}
-  {%if args.loggedIn =="True" %}
+  {%if args.loggedIn == True %}
     <h2>Hi {{ args["name"]}} thank you for logging in.</h2>
     {%if args.data_set| length >0 %}
       <p>here is your data :
