@@ -8,7 +8,6 @@ services:
       - "./oidc_server.py:/srv/oidc_server.py"
       - "./html-assets/static:/srv/static"
       - "./html-assets/templates:/srv/templates"
-      - "./.secrets/OIDC_CLIENT_SECRETS.json:/srv/.secrets/OIDC_CLIENT_SECRETS.json"
       - "./.secrets:/srv/.secrets/"
       
     ports:

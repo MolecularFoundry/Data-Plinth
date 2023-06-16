@@ -11,7 +11,12 @@ from urllib.parse import urlencode
 import secrets 
 import requests
 import json
-# See https://flask.palletsprojects.com/en/2.0.x/config/
+import globus_sdk
+
+
+
+
+
 app = Flask(__name__, static_folder='static',template_folder="templates",instance_relative_config=False)
 app.wsgi_app = ProxyFix(
     app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
@@ -19,10 +24,34 @@ app.wsgi_app = ProxyFix(
 def Merge(dict1, dict2):
     res = dict1 | dict2
     return res
-#app_key = secrets.token_hex()
-app_key ="dev_key"
+
+CLIENT_ID = open(".secrets/Globus-ID").read().strip()
+CLIENT_SECRET = open(".secrets/Globus-Secret").read().strip()
+print(CLIENT_ID +CLIENT_SECRET)
+
+confidential_client = globus_sdk.ConfidentialAppAuthClient(
+    client_id=CLIENT_ID, client_secret=CLIENT_SECRET
+)
+scopes = "urn:globus:auth:scope:transfer.api.globus.org:all"
+cc_authorizer = globus_sdk.ClientCredentialsAuthorizer(confidential_client, scopes)
+# create a new client
+transfer_client = globus_sdk.TransferClient(authorizer=cc_authorizer)
+source_endpoint_id = 
+dest_endpoint_id="9d6d994a-6d04-11e5-ba46-22000b92c6ec"
+task_data = globus_sdk.TransferData(
+    source_endpoint=source_endpoint_id, destination_endpoint=dest_endpoint_id
+)
+task_data.add_item(
+    "test.txt",  # source
+    "/~/test.txt",  # dest
+)
+
+task_doc = transfer_client.submit_transfer(task_data)
+task_id = task_doc["task_id"]
+print(f"submitted transfer, task_id={task_id}")
+app_key = open(".secrets/app_secret").read().strip()
 app.config.update({'OIDC_REDIRECT_URI': "https://mf-scicat.lbl.gov/login-ORCID'",
-                   'SECRET_KEY': app_key,  # make sure to change this!!
+                   'SECRET_KEY': app_key, 
                    'PERMANENT_SESSION_LIFETIME': datetime.timedelta(days=7).total_seconds(),
                    'DEBUG': True})
 
@@ -99,6 +128,6 @@ def profile_route():
 @auth.error_view
 def error(error=None, error_description=None):
     return jsonify({'error': error, 'message': error_description})
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+#logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 auth.init_app(app)
 app.run(host="data-plinth-flask-backend")
