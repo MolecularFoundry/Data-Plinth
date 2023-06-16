@@ -6,3 +6,4 @@ flask_oidc
 oauthlib
 flask_pyoidc
 urllib3
+globus_sdk

@@ -1,2 +1,3 @@
-# ExperimentIngestation
-IngestSender is a small proof of concept package that will be used to show the viablity of using pythong 
+# Data Plinth
+Data Plinth is part of the Authenticaion flow for MF Scicat and the tools that will be devloped alongside it.
+python3 -c 'import secrets; print(secrets.token_hex())'
