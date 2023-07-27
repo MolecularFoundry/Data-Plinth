@@ -21,7 +21,7 @@ def Merge(dict1, dict2):
     return res
 #app_key = secrets.token_hex()
 app_key = app_key = open(".secrets/app_secret").read().strip()
-app.config.update({'OIDC_REDIRECT_URI': "https://mf-scicat.lbl.gov/login-ORCID'",
+app.config.update({'OIDC_REDIRECT_URI': "https://data-plinth.lbl.gov/login-ORCID'",
                    'SECRET_KEY': app_key,  # make sure to change this!!
                    'PERMANENT_SESSION_LIFETIME': datetime.timedelta(days=7).total_seconds(),
                    'DEBUG': False})
