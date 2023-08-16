@@ -8,7 +8,7 @@ services:
       - "./html-assets/static:/srv/static"
       - "./html-assets/templates:/srv/templates"
       - "./.secrets:/srv/.secrets/"
-      
+      - "./datasetImages/:/srv/datasetImages"
     ports:
       - '5000:5000'
   ngnix-reverse-proxy:
@@ -18,5 +18,5 @@ services:
       - 443:443
     volumes:
       - "./nginx.conf:/etc/nginx/nginx.conf"
-      - ".secrets/data-plinth_lbl_gov.crt.cer:/etc/nginx/ssl/server.cer"
-      - ".secrets/data-plinth.key:/etc/ngix/ssl/server.key"
+      - "./.secrets/data-plinth_lbl_gov.pem:/etc/nginx/ssl/server.pem"
+      - "./.secrets/server.key:/etc/nginx/ssl/server.key"
