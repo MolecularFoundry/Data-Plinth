@@ -14,10 +14,8 @@ from urllib.parse import urlencode
 import secrets 
 import requests
 import json
-<<<<<<< HEAD
 import globus_sdk
 
-=======
 import pyscicat
 import os
 import uuid
@@ -34,15 +32,11 @@ from pyscicat.model import (
      Dataset,
      Ownable,RawDataset
 )
->>>>>>> main
 
 
 
 
-<<<<<<< HEAD
-=======
 # See https://flask.palletsprojects.com/en/2.0.x/config/
->>>>>>> main
 app = Flask(__name__, static_folder='static',template_folder="templates",instance_relative_config=False)
 app.wsgi_app = ProxyFix(
     app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
@@ -50,44 +44,41 @@ app.wsgi_app = ProxyFix(
 def Merge(dict1, dict2):
     res = dict1 | dict2
     return res
-<<<<<<< HEAD
-
-CLIENT_ID = open(".secrets/Globus-ID").read().strip()
-CLIENT_SECRET = open(".secrets/Globus-Secret").read().strip()
-print(CLIENT_ID +CLIENT_SECRET)
-
-confidential_client = globus_sdk.ConfidentialAppAuthClient(
-    client_id=CLIENT_ID, client_secret=CLIENT_SECRET
-)
-scopes = "urn:globus:auth:scope:transfer.api.globus.org:all"
-cc_authorizer = globus_sdk.ClientCredentialsAuthorizer(confidential_client, scopes)
-# create a new client
-transfer_client = globus_sdk.TransferClient(authorizer=cc_authorizer)
-source_endpoint_id = 
-dest_endpoint_id="9d6d994a-6d04-11e5-ba46-22000b92c6ec"
-task_data = globus_sdk.TransferData(
-    source_endpoint=source_endpoint_id, destination_endpoint=dest_endpoint_id
-)
-task_data.add_item(
-    "test.txt",  # source
-    "/~/test.txt",  # dest
-)
-
-task_doc = transfer_client.submit_transfer(task_data)
-task_id = task_doc["task_id"]
-print(f"submitted transfer, task_id={task_id}")
-app_key = open(".secrets/app_secret").read().strip()
-app.config.update({'OIDC_REDIRECT_URI': "https://mf-scicat.lbl.gov/login-ORCID'",
-                   'SECRET_KEY': app_key, 
-=======
-#app_key = secrets.token_hex()
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+GlOBUS_CLIENT_ID = open(".secrets/Globus-ID").read().strip()
+GlOBUS_CLIENT_SECRET = open(".secrets/Globus-Secret").read().strip()
+print(CLIENT_ID +CLIENT_SECRET)
+
+confidential_client = globus_sdk.ConfidentialAppAuthClient(
+    client_id=GlOBUS_CLIENT_ID, client_secret=GlOBUS_CLIENT_SECRET
+)
+def GlobusTransfer():
+    scopes = "urn:globus:auth:scope:transfer.api.globus.org:all"
+    cc_authorizer = globus_sdk.ClientCredentialsAuthorizer(confidential_client, scopes)
+    # create a new client
+    transfer_client = globus_sdk.TransferClient(authorizer=cc_authorizer)
+    source_endpoint_id = 
+    dest_endpoint_id="9d6d994a-6d04-11e5-ba46-22000b92c6ec"
+    task_data = globus_sdk.TransferData(
+        source_endpoint=source_endpoint_id, destination_endpoint=dest_endpoint_id
+    )
+    task_data.add_item(
+        "test.txt",  # source
+        "/~/test.txt",  # dest
+    )
+    task_doc = transfer_client.submit_transfer(task_data)
+    task_id = task_doc["task_id"]
+    print(f"submitted transfer, task_id={task_id}")
+app_key = open(".secrets/app_secret").read().strip()
+app.config.update({'OIDC_REDIRECT_URI': "https://mf-scicat.lbl.gov/login-ORCID'",
+                   'SECRET_KEY': app_key, 
+
+
 app_key = app_key = open(".secrets/app_secret").read().strip()
 app.config.update({'OIDC_REDIRECT_URI': "https://data-plinth.lbl.gov/login-ORCID'",
                    'SECRET_KEY': app_key,  # make sure to change this!!
->>>>>>> main
                    'PERMANENT_SESSION_LIFETIME': datetime.timedelta(days=7).total_seconds(),
                    'DEBUG': False})
 
