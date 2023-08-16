@@ -160,11 +160,7 @@ def profile_route():
                 verify=True,
             )
     token = response.json()["id"]
-    #return token
     headers["Authorization"] = f"Bearer {token}"
-    # params = {
-    # "filter":{"""{"where":{"externalId":\""""+orcid+""""}}"""}}
-    # response = requests.get(url=urljoin(base_url,"useridentities/findOne"),params=params,headers=headers,stream=False,verify=True)
     params = {
     "filter":{"""{"where":{"owner":\""""+orcid+""""}}"""}}
     response = requests.get(url=urljoin(base_url,"datasets/"),params=params,headers=headers,stream=False,verify=True)
@@ -190,14 +186,19 @@ def createDataset():
     user_session = UserSession(flask.session)
     hidden_key = open(".secrets/MF-Hub-key").read().strip()
     orcid = user_session.userinfo["sub"]
-    urlString = f"https://foundry-admin.lbl.gov/api/JSON/PsyCat-GetUser-simple.aspx?key={hidden_key}&orcid={orcid}"
+
+
+    ###GET PIDs
+    pidUrlString = f"https://foundry-admin.lbl.gov/api/JSON/PsyCat-GetUser-simple.aspx?key={hidden_key}&orcid={orcid}"
     ## get authrorized pids
-    pidResponse = requests.get(url = urlString)
+    pidResponse = requests.get(url = pidUrlString)
     pidsList = list(pidResponse.json())
     ## get form data
     formData = request.form
     pidFromForm =str(formData["ProposalID"]).strip('"')
-    
+    ###GET USER DATA
+
+    return 
     if pidFromForm in pidsList:
         if 'file' not in request.files:
             return redirect("/data-input")
@@ -220,10 +221,16 @@ def createDataset():
             contactEmail="JeffreyFulmerGardner@outlook.com", #Needed
             creationLocation="Moleculor Foundry", 
             type="raw", #Needed
-            sourceFolder=filename,##Needed 
+            sourceFolder=directoryPath,##Needed 
             accessGroups=[pidFromForm],
             creationTime=datetime.datetime.now().isoformat(),#Needed
-            ) 
+            )
+        data_file = DataFile(path=filename, size=os.path.size(filename))
+        data_block = Datablock(size=42,
+                       version=1,
+                       datasetId=dataset_id,
+                       dataFileList=[data_file])
+        scicat.upload_datablock(data_block) 
         dataset_id = scicat.datasets_create(dataset)
         attachment = Attachment(
             ownerGroup=pidFromForm,

@@ -68,6 +68,9 @@
         }
       }
     </script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""></script>
       <p>here is your data :</p>
       <ul>
           {% for item in args.data_set %}
@@ -78,8 +81,11 @@
             
                 <div id="myresult-{{loop.index0}}" class="img-zoom-result"></div>
               </div>
+              <div id="map"></div>
+             
             </li>
             <script>imageZoom("myimage-{{loop.index0}}", "myresult-{{loop.index0}}");</script>
+            <div id="map" style="height: 180px; "></div>
           {% endfor %}
         </ul>
 
