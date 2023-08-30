@@ -37,6 +37,14 @@
                 <input type="text" class="form-control" id ="descriptionTextBox" name = "desciptionValue">
               </div>
           </div>
+          <div class="d-flex justify-content-center bg-white mb-2">
+            <div class="p-2 col-example">
+              <label class="form-label" for="h5FileID">h5File</label>
+            </div>
+            <div class="p-2 col-example">
+                <input type="file" class="form-control" id ="h5FileID" name = "h5FileValue">
+              </div>
+          </div>
           <div class="d-flex justify-content-center bg-white mb-3">
             <div class="p-2 col-example">
               <div class="camera">
@@ -63,7 +71,7 @@
         </section>
       </div>
     </section>
-    <input id = "webCamFileUpload" type = "file" name=file hidden>
+    <input id = "webCamFileUpload" type = "file" name=thumbnailFile hidden>
   </form>
 {%else %}
   <h2>Please login.</h2>

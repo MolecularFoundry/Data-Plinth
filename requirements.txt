@@ -7,4 +7,8 @@ oauthlib
 flask_pyoidc
 urllib3
 globus_sdk
-pyscicat
+#pyscicat @ git+https://github.com/MolecularFoundry/pyscicat.git@v4.x
+silx
+uuid7
+base58
+pydantic

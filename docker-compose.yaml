@@ -5,6 +5,7 @@ services:
     build: '.'
     volumes:
       - "./oidc_server.py:/srv/oidc_server.py"
+      - "./MF_Hdf5.py:/srv/MF_Hdf5.py"
       - "./html-assets/static:/srv/static"
       - "./html-assets/templates:/srv/templates"
       - "./.secrets:/srv/.secrets/"

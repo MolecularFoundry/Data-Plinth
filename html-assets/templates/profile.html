@@ -75,6 +75,8 @@
       <ul>
           {% for item in args.data_set %}
             <li>
+              <a href="/profile/dataset/{{item._id}}">Data Set {{item._id}}</a>
+              <!--
               <div class="img-zoom-container">
          
                 <img id="myimage-{{loop.index0}}" src="{{item.sourceFolder.strip('.')}}" width="300" height="240" alt="Girl">
@@ -82,10 +84,13 @@
                 <div id="myresult-{{loop.index0}}" class="img-zoom-result"></div>
               </div>
               <div id="map"></div>
-             
+
+            -->
             </li>
+            <!--
             <script>imageZoom("myimage-{{loop.index0}}", "myresult-{{loop.index0}}");</script>
             <div id="map" style="height: 180px; "></div>
+            -->
           {% endfor %}
         </ul>
 

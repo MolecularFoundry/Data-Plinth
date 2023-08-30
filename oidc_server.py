@@ -15,7 +15,8 @@ import secrets
 import requests
 import json
 import globus_sdk
-
+from uuid_extensions import uuid7, uuid7str
+import base58
 import pyscicat
 import os
 import uuid
@@ -24,14 +25,18 @@ from dotenv import load_dotenv
 import requests
 from urllib.parse import urljoin
 load_dotenv()
-from pyscicat.client import encode_thumbnail, ScicatClient 
-from pyscicat.model import (
+from MF_Hdf5 import MF_Hdf5_Decoder
+from pyscicat.pyscicat.client import encode_thumbnail, ScicatClient 
+from pyscicat.pyscicat.model import (
      Attachment,
      Datablock,
      DataFile,
      Dataset,
-     Ownable,RawDataset
+     Ownable,
+     RawDataset,
+     OrigDatablock
 )
+import h5py
 
 
 
@@ -49,33 +54,30 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 GlOBUS_CLIENT_ID = open(".secrets/Globus-ID").read().strip()
 GlOBUS_CLIENT_SECRET = open(".secrets/Globus-Secret").read().strip()
-print(CLIENT_ID +CLIENT_SECRET)
 
-confidential_client = globus_sdk.ConfidentialAppAuthClient(
-    client_id=GlOBUS_CLIENT_ID, client_secret=GlOBUS_CLIENT_SECRET
-)
-def GlobusTransfer():
+UPLOAD_FOLDER = './static/images/datasetImages/'
+ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
+
+confidential_client = globus_sdk.ConfidentialAppAuthClient(client_id=GlOBUS_CLIENT_ID, client_secret=GlOBUS_CLIENT_SECRET)
+def globusTransfer(fullFileName):
+    fullFileName=UPLOAD_FOLDER+"html-assets/static/images/datasetImages/h5sample.h5"
     scopes = "urn:globus:auth:scope:transfer.api.globus.org:all"
     cc_authorizer = globus_sdk.ClientCredentialsAuthorizer(confidential_client, scopes)
     # create a new client
     transfer_client = globus_sdk.TransferClient(authorizer=cc_authorizer)
-    source_endpoint_id = 
+    
+    local_ep = globus_sdk.LocalGlobusConnectPersonal()
+    ep_id = local_ep.endpoint_id
+    source_endpoint_id = "fdc8eac4-3d48-11ee-b694-812118bf21b5"# ep_id# "4fd03404-512f-4a41-a1a6-8df5f2aef9e3"
     dest_endpoint_id="9d6d994a-6d04-11e5-ba46-22000b92c6ec"
-    task_data = globus_sdk.TransferData(
-        source_endpoint=source_endpoint_id, destination_endpoint=dest_endpoint_id
-    )
+    task_data = globus_sdk.TransferData(transfer_client=transfer_client,source_endpoint=source_endpoint_id, destination_endpoint=dest_endpoint_id)
     task_data.add_item(
-        "test.txt",  # source
-        "/~/test.txt",  # dest
+        fullFileName,  # source
+        "/~/h5sample.h5",  # dest
     )
     task_doc = transfer_client.submit_transfer(task_data)
     task_id = task_doc["task_id"]
     print(f"submitted transfer, task_id={task_id}")
-app_key = open(".secrets/app_secret").read().strip()
-app.config.update({'OIDC_REDIRECT_URI': "https://mf-scicat.lbl.gov/login-ORCID'",
-                   'SECRET_KEY': app_key, 
-
-
 app_key = app_key = open(".secrets/app_secret").read().strip()
 app.config.update({'OIDC_REDIRECT_URI': "https://data-plinth.lbl.gov/login-ORCID'",
                    'SECRET_KEY': app_key,  # make sure to change this!!
@@ -116,6 +118,8 @@ class user():
     email=""
     lbl_email=""
     orcid=""
+    def fullname(self):
+        return f"{self.first_name} {self.last_name}"
 
 @app.route("/data-input")
 def data_input():
@@ -204,73 +208,167 @@ def profile_route():
         arguments["data_set"]={}
     arguments = argumentHandler(requestArguments=request.args,newArguments=arguments)
     return render_template("profile.html",args=arguments)    
+@auth.oidc_auth(PROVIDER_NAME)
+@app.route("/profile/dataset/<requested_dataset_id>",methods=["GET"])
+def get_dataset(requested_dataset_id):
+    arguments={}
+    arguments["loggedIn"]= bool(auth.valid_access_token())
+    user_session = UserSession(flask.session)
+    hidden_key = open(".secrets/MF-Hub-key").read().strip()
+    orcid = user_session.userinfo["sub"]
 
 
+    ##Get list of allowed Datasets
+    base_url="https://mf-scicat.lbl.gov/api/v3/"
+    headers = {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+        }
+    response = requests.post(
+                urljoin(base_url, "Users/login"),
+                json={"username": os.getenv("usr"), "password":os.getenv("pw")},
+                stream=False,
+                verify=True,
+            )
+    token = response.json()["id"]
+    headers["Authorization"] = f"Bearer {token}"
+    params = {
+    "filter":{"""{"where":{"owner":\""""+orcid+""""}}"""}}
+    dataset_response = requests.get(url=urljoin(base_url,"datasets/"),params=params,headers=headers,stream=False,verify=True)
+    
+
+
+    if(len(response.json())>0):
+        allowed_data_sets = []
+        for dataset in dataset_response.json():
+            allowed_data_sets.append(dataset["_id"])
+        if requested_dataset_id in allowed_data_sets:
+            arguments["event"] = True
+            arguments["event_type"] = "alert-sucess"
+            arguments["event_text"] = "Data set loaded"
+            data_block_params = {"fields":{"{\"datasetId\":\""+requested_dataset_id+"\"}"}}
+            arguments["data_blocks"] = requests.get(url=urljoin(base_url,"origdatablocks/fullquery/"),params=data_block_params,headers=headers,stream=False,verify=True)
+            arguments["data_set"]=requests.get(url=urljoin(base_url,"datasets/"+requested_dataset_id),headers=headers,stream=False,verify=True)
+        else:
+            arguments["event"] = True
+            arguments["event_type"] = "alert-danger"
+            arguments["event_text"] = "User not allowed to view Data set"
+            arguments["data_set"]={}
+    else:
+        arguments["event"] = True
+        arguments["event_type"] = "alert-danger"
+        arguments["event_text"] = "No datasets found for users"
+        arguments["data_set"]={}
+    arguments = argumentHandler(requestArguments=request.args,newArguments=arguments)
+    return render_template("dataset.html",args=arguments)
 @app.route("/createDataset",methods=['POST'])
 def createDataset():
-    
-    
+    arguments = {}
     ## create Scicat client
     scicat = ScicatClient(base_url="https://mf-scicat.lbl.gov/api/v3",username=os.getenv("usr"),password=os.getenv("pw"))
     ## create MF Admin client infromation 
     user_session = UserSession(flask.session)
     hidden_key = open(".secrets/MF-Hub-key").read().strip()
     orcid = user_session.userinfo["sub"]
-
-
-    ###GET PIDs
-    pidUrlString = f"https://foundry-admin.lbl.gov/api/JSON/PsyCat-GetUser-simple.aspx?key={hidden_key}&orcid={orcid}"
+    uuidNumber = uuid7()
+    persistent_id= "TMF/"+base58.b58encode(uuidNumber.bytes).encode()
+    ###GET MFPs
+    mfpUrlString = f"https://foundry-admin.lbl.gov/api/JSON/PsyCat-GetUser-simple.aspx?key={hidden_key}&orcid={orcid}"
     ## get authrorized pids
-    pidResponse = requests.get(url = pidUrlString)
-    pidsList = list(pidResponse.json())
+    mfpResponse = requests.get(url = mfpUrlString)
+    mfpList = list(mfpResponse.json())
     ## get form data
     formData = request.form
-    pidFromForm =str(formData["ProposalID"]).strip('"')
+    mfpFromForm =str(formData["ProposalID"]).strip('"')
     ###GET USER DATA
-
-    return 
-    if pidFromForm in pidsList:
-        if 'file' not in request.files:
-            return redirect("/data-input")
-        file = request.files['file']
-        if file.filename == '':
-            return redirect("/data-input")
-        if file and allowed_file(file.filename):
-            directoryPath =os.path.join(app.config['UPLOAD_FOLDER'], f"{pidFromForm}/")
-            filename = f"{directoryPath}{str(uuid.uuid4())}-{secure_filename(file.filename)}"
+    userinfoUrl = f"https://foundry-admin.lbl.gov/api/JSON/PsyCat-GetUser.aspx?key={hidden_key}&orcid={orcid}"
+    userInfoResponse = requests.get(url=userinfoUrl)
+    userInfo = userInfoResponse.json()[0]
+    dataPlinthUser = user()
+    dataPlinthUser.first_name = userInfo["first_name"]
+    dataPlinthUser.last_name = userInfo["last_name"]
+    dataPlinthUser.email = userInfo["email"]
+    dataPlinthUser.lbl_email = userInfo["lbl_email"]
+    dataPlinthUser.orcid = orcid
+    ##### create Data
+    if mfpFromForm in mfpList:
+        if 'thumbnailFile' not in request.files or "h5FileValue" not in request.files:
+            arguments["event"] = True
+            arguments["event_type"] = "alert-danger"
+            arguments["event_text"] =""#make blank so we can ask for it in the next step
+            if "thumbnailFile" not in request.files:
+                arguments["event_text"] = arguments["event_text"] + "No Thumnail picture provided"
+            if "h5FileValue" not in request.files:
+                arguments["event_text"] = arguments["event_text"] + "No h5file picture provided"
+            arguments = argumentHandler(requestArguments=request.args,newArguments=arguments)
+            encodedURl = "?"+urlencode(arguments)
+            return redirect("/data-input"+encodedURl)
+        thumbnailFile = request.files['thumbnailFile']
+        h5File = request.files["h5FileValue"]
+        if h5File.filename == '':
+            arguments["event"] = True
+            arguments["event_type"] = "alert-danger"
+            arguments["event_text"] ="No file name in h5 file"
+            arguments = argumentHandler(requestArguments=request.args,newArguments=arguments)
+            encodedURl = "?"+urlencode(arguments)
+            return redirect("/data-input"+encodedURl)
+        if (thumbnailFile and allowed_file(thumbnailFile.filename)) and (thumbnailFile and allowed_file(h5File.filename)):
+            directoryPath =os.path.join(app.config['UPLOAD_FOLDER'], f"{mfpFromForm}/")
+            thumbnailFilename = f"{directoryPath}{str(uuid.uuid4())}-{secure_filename(thumbnailFile.filename)}"
+            h5Filename = f"{directoryPath}{str(uuid.uuid4())}-{secure_filename(h5File.filename)}" 
         if not os.path.exists(directoryPath):
             os.makedirs(directoryPath)
-        file.save(filename)
-        ownable = Ownable(ownerGroup=str(pidFromForm), accessGroups=[str(pidFromForm)])
+        
+        thumbnailFile.save(thumbnailFilename)
+        h5File.save(h5Filename)
+        #reassigning to the h5py h5File
+        h5File = h5py.File(h5Filename)
+        #ownable = Ownable(ownerGroup=str(mfpFromForm), accessGroups=[str(mfpFromForm)])
+        mfF5Decoder = MF_Hdf5_Decoder(h5File)
+        mfF5Decoder.h5File.visititems(mfF5Decoder.decode)
+        scientificMetadataDict = json.loads(mfF5Decoder.dumps())
         dataset = RawDataset(
+            pid=persistent_id,
             ownerGroup="Admin",    #Needed
             description=formData["desciptionValue"], #Optional
             owner=orcid, #needed
             orcidOfOwner=orcid, #optional
-            principalInvestigator = "Jeff",#Needed
-            contactEmail="JeffreyFulmerGardner@outlook.com", #Needed
+            principalInvestigator = dataPlinthUser.fullname() ,#Needed
+            contactEmail= dataPlinthUser.email, #Needed
             creationLocation="Moleculor Foundry", 
             type="raw", #Needed
-            sourceFolder=directoryPath,##Needed 
-            accessGroups=[pidFromForm],
+            sourceFolder=directoryPath,#sourceFolder=directoryPath,##Needed 
+            scientificMetadata = scientificMetadataDict,
+            accessGroups=[mfpFromForm],
             creationTime=datetime.datetime.now().isoformat(),#Needed
             )
-        data_file = DataFile(path=filename, size=os.path.size(filename))
-        data_block = Datablock(size=42,
-                       version=1,
-                       datasetId=dataset_id,
-                       dataFileList=[data_file])
-        scicat.upload_datablock(data_block) 
-        dataset_id = scicat.datasets_create(dataset)
-        attachment = Attachment(
-            ownerGroup=pidFromForm,
+        dataset_id = scicat.datasets_create(dataset)["pid"]
+        h5data_file = DataFile(path=h5Filename, size=os.path.getsize(h5Filename),time = datetime.datetime.now().isoformat())
+        listOfH5Files = []
+        listOfH5Files.append(h5data_file)
+        totalSizeOfFiles= 0
+        for h5Fileindex in listOfH5Files:
+            totalSizeOfFiles = totalSizeOfFiles + os.path.getsize(h5Fileindex.path)
+        data_block = OrigDatablock(size=totalSizeOfFiles,
+            ownerGroup="Admin",    
+            version="1",
             datasetId=dataset_id,
-            thumbnail=encode_thumbnail(filename),
-            caption="scattering image",
+            dataFileList=listOfH5Files)
+        scicat.datasets_origdatablock_create(data_block) 
+
+        
+        attachment = Attachment(
+            ownerGroup=mfpFromForm,
+            datasetId=dataset_id,
+            thumbnail=encode_thumbnail(thumbnailFilename),
+            caption="Thumnail Image",
             )
-
-        scicat.upload_attachment(attachment)
-
+        scicat.upload_attachment(attachment,datasetType="datasets")
+    arguments["event"] = True
+    arguments["event_type"] = "alert-sucess"
+    arguments["event_text"] =f"Dataset created with id {dataset_id}"
+    arguments = argumentHandler(requestArguments=request.args,newArguments=arguments)
+    encodedURl = "?"+urlencode(arguments)    
     return redirect("/profile")
 @auth.error_view
 def error(error=None, error_description=None):
@@ -279,6 +377,6 @@ def error(error=None, error_description=None):
 auth.init_app(app)
 
 UPLOAD_FOLDER = './static/images/datasetImages/'
-ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
+ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif',"h5"])
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.run(host="data-plinth-flask-backend",debug=True)
